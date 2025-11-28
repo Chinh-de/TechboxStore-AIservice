@@ -20,7 +20,8 @@
 
 Chạy server với lệnh:
 ```
-uvicorn main:app --reload
+<!-- uvicorn main:app --reload -->
+python server.py
 ```
 
 API sẽ có sẵn tại `http://127.0.0.1:8000`

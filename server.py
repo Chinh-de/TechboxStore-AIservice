@@ -1,5 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 import numpy as np
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # Import từ các module con
 from schemas import SearchRequest, RecRequest, ChatRequest
@@ -7,8 +10,9 @@ from services.ai_models import ai_manager
 from services.database import db_manager
 from services.processing import process_image_to_vector, encode_text, normalize
 from services.gemini_chat import route_question, generate_answer
+from config import SIMILARITY_THRESHOLD_PRODUCT, SIMILARITY_THRESHOLD_POLICY
 
-app = FastAPI(title="AI Super Service (Modular)")
+app = FastAPI(title="AI Service for TechBoxStore")
 
 @app.on_event("startup")
 async def startup_event():
@@ -93,37 +97,85 @@ async def chat_bot(req: ChatRequest):
     hist_str = "\n".join([f"{m.role}: {m.content}" for m in req.history[-6:]])
     
     # 1. Router
+    print(f"Routing question: {req.question}")
     router_res = route_question(req.question, hist_str)
     intent = router_res.get("intent", "CHITCHAT")
+    print(f"Intent: {intent}")
     query = router_res.get("optimized_query", req.question)
+    print(f"Optimized Query: {query}")
     
     ctx, instr, skus, src = "", "", [], ""
     
     # 2. Logic Intent
     if intent == "PRODUCT":
-        found = search_products(query, k=5, return_full_text=True)
+        search_results = search_products(query, k=5, return_full_text=True)
+        found = [p for p in search_results if p['score'] >= SIMILARITY_THRESHOLD_PRODUCT]
         if found:
             ctx = "[SẢN PHẨM]:\n" + "\n".join([f"- {p['full_text']}" for p in found])
             skus = [p['sku'] for p in found]
-            instr = "Bạn là Sales. Tư vấn và mời mua."
+            instr = """
+            VAI TRÒ: Bạn là Chuyên viên tư vấn công nghệ tại TechBoxStore.
+            MỤC TIÊU: Giúp khách hàng chọn được sản phẩm phù hợp nhất trong danh sách và chốt đơn.
+            
+            YÊU CẦU TRẢ LỜI:
+            1. Dựa CHẶT CHẼ vào 'DANH SÁCH SẢN PHẨM TÌM THẤY' bên trên.
+            2. Nếu có nhiều sản phẩm, hãy so sánh ngắn gọn ưu/nhược điểm (VD: Con này mạnh hơn về đồ họa, con kia pin trâu hơn).
+            3. Luôn đưa ra mức giá để khách cân nhắc.
+            4. Giọng văn: Nhiệt tình, chuyên nghiệp, dùng emoji vừa phải.
+            5. Tuyệt đối không bịa đặt tính năng không có trong dữ liệu.
+            """
         else:
-            ctx = "Không tìm thấy sản phẩm."
-            instr = "Xin lỗi và hỏi lại nhu cầu."
+            ctx = "Không tìm thấy sản phẩm nào khớp với yêu cầu."
+            instr = """
+            VAI TRÒ: Chuyên viên tư vấn.
+            TÌNH HUỐNG: Khách hỏi sản phẩm mà cửa hàng hiện không có hoặc mô tả chưa rõ.
+            HÀNH ĐỘNG:
+            1. Khéo léo xin lỗi vì chưa tìm thấy sản phẩm chính xác.
+            2. Gợi ý khách cung cấp thêm chi tiết (Tầm tiền, hãng yêu thích, nhu cầu cụ thể hơn).
+            3. Đừng bịa ra sản phẩm.
+            4. Không đề cập đến giá vì sẽ hiện thị giá ngay bên dưới.
+            """
             
     elif intent == "POLICY":
-        tbl = db_manager.get_table('knowledge')
+        tbl = db_manager.get_table('knowledge_base')
         if tbl:
             vec = encode_text(query)
-            res = tbl.search(vec).metric("cosine").limit(3).to_list()
-            ctx = "[CHÍNH SÁCH]:\n" + "\n".join([f"- {r['text']}" for r in res])
+            chunks = tbl.search(vec).metric("cosine").limit(5).to_list()
+            res = [r for r in chunks if (1 - r['_distance']) >= SIMILARITY_THRESHOLD_POLICY]
+            ctx = "[THÔNG TIN CÓ THỂ LIÊN QUAN]:\n" + "\n".join([f"- {r['text']}" for r in res])
             src = "\n".join([f"- {r.get('source','')}" for r in res])
-        instr = "Bạn là CSKH. Trả lời theo chính sách."
+        instr = """
+                VAI TRÒ: Nhân viên Chăm sóc khách hàng (CSKH) tận tâm.
+                MỤC TIÊU: Giải đáp thắc mắc về quy định, bảo hành, đổi trả.
+                
+                YÊU CẦU TRẢ LỜI:
+                1. Trả lời chính xác dựa trên thông tin đi kèm. Không chém gió.
+                2. Nếu thông tin không đủ để trả lời, hãy hướng dẫn khách gọi hotline 19001234.
+                3. Giọng văn: Lịch sự, đồng cảm (nếu khách khiếu nại), rõ ràng.
+                """
         
     else:
-        instr = "Bạn là trợ lý thân thiện. Chat vui vẻ."
+        ctx = "Không có dữ liệu tra cứu."
+        instr = """
+        VAI TRÒ: Trợ lý ảo thân thiện của TechBoxStore.
+        HÀNH ĐỘNG: 
+        - Trò chuyện vui vẻ, ngắn gọn với khách.
+        - Nếu khách hỏi ngoài lề (thời tiết, bóng đá...), hãy khéo léo lái về công nghệ hoặc sản phẩm của shop.
+        - Luôn giữ thái độ phục vụ.
+        """
         
     # 3. Generate
+
+    print("="*20)
+    print("Generating answer...")
+    print(f"System Instruction: {instr}")
+    print(f"Context: {ctx}")
+    print(f"History: {hist_str}")
+    print(*"="*20)
+    
+
     ans = generate_answer(instr, ctx, hist_str, req.question)
+    print(f"Answer from Gemini: {ans}")
     
     return {
         "answer": ans,
