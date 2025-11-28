@@ -14,5 +14,5 @@ class SearchRequest(BaseModel):
     top_k: int = 10
 
 class RecRequest(BaseModel):
-    skus: List[str]
+    spus: List[str]
     top_k: int = 10

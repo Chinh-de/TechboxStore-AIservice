@@ -44,7 +44,7 @@ API sẽ có sẵn tại `http://127.0.0.1:8000`
     "status": "success",
     "data": [
       {
-        "sku": "DELL-G5-15",
+        "spu": "DELL-G5-15",
         "score": 0.85
       }
     ]
@@ -57,7 +57,7 @@ API sẽ có sẵn tại `http://127.0.0.1:8000`
 - **Body** (JSON):
   ```json
   {
-    "skus": ["DELL-G5-15", "HP-PAVILION"],
+    "spus": ["DELL-G5-15", "HP-PAVILION"],
     "top_k": 5
   }
   ```
@@ -66,7 +66,7 @@ API sẽ có sẵn tại `http://127.0.0.1:8000`
   {
     "data": [
       {
-        "sku": "ASUS-ROG",
+        "spu": "ASUS-ROG",
         "score": 0.92
       }
     ]
@@ -84,7 +84,7 @@ API sẽ có sẵn tại `http://127.0.0.1:8000`
   {
     "data": [
       {
-        "sku": "DELL-G5-15",
+        "spu": "DELL-G5-15",
         "score": 0.78
       }
     ]

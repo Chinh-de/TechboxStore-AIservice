@@ -12,7 +12,7 @@ TABLE_NAME = "products"
 # Khai báo Schema cứng để đảm bảo dữ liệu chuẩn
 # Lưu ý: Số chiều phải khớp với model bạn dùng (768 và 1920 như bài trước)
 class ProductSchema(LanceModel):
-    sku: str
+    spu: str
     vector_search: Vector(768)   # Model dangvantuan (Semantic)
     vector_recs: Vector(1920)    # Hybrid (384*3 + 768)
     full_text: str               # Nội dung để RAG đọc
@@ -25,8 +25,8 @@ try:
     vecs_search = np.load('./seedData/vectors_search.npy')
     vecs_recs   = np.load('./seedData/vectors_recs.npy')
     
-    with open('./seedData/product_skus.pkl', 'rb') as f:
-        skus = pickle.load(f)
+    with open('./seedData/product_spus.pkl', 'rb') as f:
+        spus = pickle.load(f)
         
     with open('./seedData/product_full_detail.pkl', 'rb') as f:
         full_texts = pickle.load(f)
@@ -40,16 +40,16 @@ except FileNotFoundError:
     exit()
 
 # Kiểm tra tính toàn vẹn
-if not (len(vecs_search) == len(vecs_recs) == len(skus)):
+if not (len(vecs_search) == len(vecs_recs) == len(spus)):
     print(" Lỗi: Số lượng dữ liệu không khớp nhau!")
     exit()
 
 # --- 3. CHUẨN BỊ DATA LIST ---
 print(" Đang map dữ liệu...")
 data = []
-for i in tqdm(range(len(skus))):
+for i in tqdm(range(len(spus))):
     data.append({
-        "sku": str(skus[i]),
+        "spu": str(spus[i]),
         "vector_search": vecs_search[i], # Nạp vào cột search
         "vector_recs": vecs_recs[i],     # Nạp vào cột recs
         "full_text": full_texts[i]

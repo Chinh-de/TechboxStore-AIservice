@@ -120,7 +120,7 @@
 #     top_k: int = 10
 
 # class RecRequest(BaseModel):
-#     skus: List[str]
+#     spus: List[str]
 #     top_k: int = 10
 # def route_question(user_query, history_text):
 #     """
@@ -168,7 +168,7 @@
 # def search_products(query: str, k: int =10, return_full_text: bool = True):
 #     """
 #     Tìm kiếm sản phẩm và trả về danh sách chi tiết.
-#     Output format: List[{'sku': str, 'full_text': str, 'score': float}]
+#     Output format: List[{'spu': str, 'full_text': str, 'score': float}]
 #     """
 #     if 'products' not in db_tables: 
 #         return []
@@ -189,7 +189,7 @@
 #             text_content = r.get('full_text', '')
         
 #         structured_results.append({
-#             "sku": r['sku'],          # SPU để trả về Frontend
+#             "spu": r['spu'],          # SPU để trả về Frontend
 #             "full_text": text_content, # Text để đưa vào Prompt
 #             "score": 1 - r['_distance'] # Độ giống
 #         })
@@ -220,26 +220,26 @@
 # @app.post("/recommend")
 # async def recommend(req: RecRequest):
 #     try:
-#         if not req.skus: return {"data": []}
+#         if not req.spus: return {"data": []}
 
 #         # 1. Lấy dữ liệu từ DB
 #         # fixbug: LanceDB trả về thứ tự ngẫu nhiên
-#         skus_str = ", ".join([f"'{s}'" for s in req.skus])
-#         items = db_tables['products'].search().where(f"sku IN ({skus_str})").limit(len(req.skus)).to_list()
+#         spus_str = ", ".join([f"'{s}'" for s in req.spus])
+#         items = db_tables['products'].search().where(f"spu IN ({spus_str})").limit(len(req.spus)).to_list()
         
 #         if not items: return {"data": []}
 
-#         # 2. Map SKU -> Vector để đồng bộ thứ tự
-#         # Giả sử req.skus gửi lên theo thứ tự: [Cũ nhất, ..., Mới nhất]
-#         sku_to_vec = {item['sku']: np.array(item['vector_recs']) for item in items}
+#         # 2. Map spu -> Vector để đồng bộ thứ tự
+#         # Giả sử req.spus gửi lên theo thứ tự: [Cũ nhất, ..., Mới nhất]
+#         spu_to_vec = {item['spu']: np.array(item['vector_recs']) for item in items}
         
 #         ordered_vectors = []
-#         found_skus = [] 
+#         found_spus = [] 
         
-#         for sku in req.skus:
-#             if sku in sku_to_vec:
-#                 ordered_vectors.append(sku_to_vec[sku])
-#                 found_skus.append(sku)
+#         for spu in req.spus:
+#             if spu in spu_to_vec:
+#                 ordered_vectors.append(spu_to_vec[spu])
+#                 found_spus.append(spu)
         
 #         if not ordered_vectors: return {"data": []}
 
@@ -263,17 +263,17 @@
 #         # Lấy dư ra (top_k + số lượng lịch sử) để trừ hao
 #         results = db_tables['products'].search(user_vec, vector_column_name="vector_recs") \
 #             .metric("cosine") \
-#             .limit(req.top_k + len(found_skus)) \
+#             .limit(req.top_k + len(found_spus)) \
 #             .to_list()
             
 #         # 6. Lọc bỏ sản phẩm đã có
 #         final = []
-#         seen = set(found_skus)
+#         seen = set(found_spus)
         
 #         for r in results:
-#             if r['sku'] not in seen:
+#             if r['spu'] not in seen:
 #                 final.append({
-#                     "sku": r['sku'], 
+#                     "spu": r['spu'], 
 #                     "score": 1 - r['_distance']
 #                 })
 #                 if len(final) >= req.top_k: break
@@ -298,9 +298,9 @@
 #         final = []
 #         seen = set()
 #         for r in results:
-#             if r['sku'] not in seen and r['sku'] != "UNKNOWN":
-#                 final.append({"sku": r['sku'], "score": 1 - r['_distance']})
-#                 seen.add(r['sku'])
+#             if r['spu'] not in seen and r['spu'] != "UNKNOWN":
+#                 final.append({"spu": r['spu'], "score": 1 - r['_distance']})
+#                 seen.add(r['spu'])
 #             if len(final) >= top_k: break
 #         return {"data": final}
 #     except Exception as e:
@@ -327,7 +327,7 @@
 #         context_str = ""
 #         system_instruction = ""
         
-#         suggested_skus = []
+#         suggested_spus = []
 #         src = ""
         
 #         # 3. XỬ LÝ THEO NHÁNH
@@ -340,8 +340,8 @@
 #                 prod_texts = [f"{i+1}. {p['full_text']}" for i, p in enumerate(products_found)]
 #                 context_str = f"[DANH SÁCH SẢN PHẨM PHÙ HỢP]:\n" + "\n".join(prod_texts)
                 
-#                 # B. Lấy SKU để trả về Frontend (Lấy sku)
-#                 suggested_skus = [p['sku'] for p in products_found]
+#                 # B. Lấy spu để trả về Frontend (Lấy spu)
+#                 suggested_spus = [p['spu'] for p in products_found]
                 
 #                 system_instruction = "Bạn là nhân viên Sales. Dựa vào danh sách sản phẩm trên để tư vấn, so sánh và mời khách mua các sản phẩm đi kèm."
 #             else:
@@ -383,11 +383,11 @@
 #         # 5. GENERATE
 #         response = models['gemini'].generate_content(final_prompt)
         
-#         # 6. TRẢ VỀ KẾT QUẢ (KÈM SKU)
+#         # 6. TRẢ VỀ KẾT QUẢ (KÈM spu)
 #         return {
 #             "answer": response.text.strip(),
 #             "intent": intent,
-#             "related_products": suggested_skus,
+#             "related_products": suggested_spus,
 #             "src" : src,
 #             "debug_query": search_query
 #         }

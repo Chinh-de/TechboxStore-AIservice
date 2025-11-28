@@ -30,7 +30,7 @@ def search_products(query, k=10, return_full_text=True):
     out = []
     for r in results:
         txt = r.get('full_text') if return_full_text else ""
-        out.append({"sku": r['sku'], "full_text": txt, "score": 1 - r['_distance']})
+        out.append({"spu": r['spu'], "full_text": txt, "score": 1 - r['_distance']})
     return out
 
 # --- API ENDPOINTS ---
@@ -43,16 +43,16 @@ async def search_text(req: SearchRequest):
 @app.post("/recommend")
 async def recommend(req: RecRequest):
     tbl = db_manager.get_table('products')
-    if not tbl or not req.skus: return {"data": []}
+    if not tbl or not req.spus: return {"data": []}
     
-    skus_str = ", ".join([f"'{s}'" for s in req.skus])
-    items = tbl.search().where(f"sku IN ({skus_str})").limit(len(req.skus)).to_list()
+    spus_str = ", ".join([f"'{s}'" for s in req.spus])
+    items = tbl.search().where(f"spu IN ({spus_str})").limit(len(req.spus)).to_list()
     
     if not items: return {"data": []}
     
     # Logic Time Decay
-    sku_to_vec = {item['sku']: np.array(item['vector_recs']) for item in items}
-    ordered = [sku_to_vec[s] for s in req.skus if s in sku_to_vec]
+    spu_to_vec = {item['spu']: np.array(item['vector_recs']) for item in items}
+    ordered = [spu_to_vec[s] for s in req.spus if s in spu_to_vec]
     
     if not ordered: return {"data": []}
     
@@ -60,13 +60,13 @@ async def recommend(req: RecRequest):
     user_vec = np.average(ordered, axis=0, weights=weights)
     
     # Search
-    results = tbl.search(user_vec, vector_column_name="vector_recs").metric("cosine").limit(req.top_k + len(req.skus)).to_list()
+    results = tbl.search(user_vec, vector_column_name="vector_recs").metric("cosine").limit(req.top_k + len(req.spus)).to_list()
     
     final = []
-    seen = set(req.skus)
+    seen = set(req.spus)
     for r in results:
-        if r['sku'] not in seen:
-            final.append({"sku": r['sku'], "score": 1 - r['_distance']})
+        if r['spu'] not in seen:
+            final.append({"spu": r['spu'], "score": 1 - r['_distance']})
             if len(final) >= req.top_k: break
             
     return {"data": final}
@@ -84,9 +84,9 @@ async def search_image(file: UploadFile = File(...), top_k: int = 10):
     final = []
     seen = set()
     for r in results:
-        if r['sku'] not in seen and r['sku'] != "UNKNOWN":
-            final.append({"sku": r['sku'], "score": 1 - r['_distance']})
-            seen.add(r['sku'])
+        if r['spu'] not in seen and r['spu'] != "UNKNOWN":
+            final.append({"spu": r['spu'], "score": 1 - r['_distance']})
+            seen.add(r['spu'])
         if len(final) >= top_k: break
     return {"data": final}
 
@@ -104,7 +104,7 @@ async def chat_bot(req: ChatRequest):
     query = router_res.get("optimized_query", req.question)
     print(f"Optimized Query: {query}")
     
-    ctx, instr, skus, src = "", "", [], ""
+    ctx, instr, spus, src = "", "", [], ""
     
     # 2. Logic Intent
     if intent == "PRODUCT":
@@ -112,7 +112,7 @@ async def chat_bot(req: ChatRequest):
         found = [p for p in search_results if p['score'] >= SIMILARITY_THRESHOLD_PRODUCT]
         if found:
             ctx = "[SẢN PHẨM]:\n" + "\n".join([f"- {p['full_text']}" for p in found])
-            skus = [p['sku'] for p in found]
+            spus = [p['spu'] for p in found]
             instr = """
             VAI TRÒ: Bạn là Chuyên viên tư vấn công nghệ tại TechBoxStore.
             MỤC TIÊU: Giúp khách hàng chọn được sản phẩm phù hợp nhất trong danh sách và chốt đơn.
@@ -180,7 +180,7 @@ async def chat_bot(req: ChatRequest):
     return {
         "answer": ans,
         "intent": intent,
-        "related_products": skus,
+        "related_products": spus,
         "src": src
     }
 

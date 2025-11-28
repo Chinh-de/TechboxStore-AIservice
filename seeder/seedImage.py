@@ -28,24 +28,24 @@ if len(vectors) != len(filenames):
     print(f"Cảnh báo: Số lượng vector ({len(vectors)}) và tên file ({len(filenames)}) không khớp nhau!")
     exit()
 
-# 2. CHUẨN BỊ DỮ LIỆU (TRÍCH XUẤT SKU)
+# 2. CHUẨN BỊ DỮ LIỆU (TRÍCH XUẤT spu)
 print("Đang xử lý dữ liệu...")
 
 data_list = []
 for i, filename in enumerate(filenames):
     # Filename mẫu: "PRD-96394C6C-54E0-171b42f6.jpg" 
     
-    # Trích xuất SKU: Lấy phần trước dấu gạch ngang thứ 2
+    # Trích xuất spu: Lấy phần trước dấu gạch ngang thứ 2
     try:
         basename = filename.split('/')[-1]  # PRD-ABC-12345.jpg
-        sku = "-".join(basename.split('-')[:2])
+        spu = "-".join(basename.split('-')[:2])
         
     except:
-        sku = "UNKNOWN"
+        spu = "UNKNOWN"
 
     data_list.append({
         "vector": vectors[i],      # LanceDB nhận trực tiếp numpy array
-        "sku": sku,                # SKU để query ngược ra thông tin sản phẩm
+        "spu": spu,                # spu để query ngược ra thông tin sản phẩm
     })
 
 # 3. LƯU VÀO LANCEDB
