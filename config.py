@@ -11,6 +11,8 @@ TBL_PRODUCTS = "products"
 TBL_IMAGES = "product_images"
 TBL_KNOWLEDGE = "knowledge_base"
 
+SYNC_API_KEY = os.getenv("SYNC_API_KEY")
+
 # Trọng số 
 W_BRAND = 2.0
 W_CATE  = 2.0

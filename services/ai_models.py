@@ -8,13 +8,13 @@ class AIModelManager:
         self.text_model = None
         self.image_model = None
         self.gemini_model = None
+        self.short_text_model = None
 
     def load_models(self):
         print(" Đang tải các Model AI...")
         
         # 1. Text Model
         self.text_model = SentenceTransformer('dangvantuan/vietnamese-document-embedding', trust_remote_code=True)
-        self.text_model.max_seq_length = 4096
         
         # 2. Image Model
         self.image_model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
@@ -25,7 +25,10 @@ class AIModelManager:
             self.gemini_model = genai.GenerativeModel('gemini-2.0-flash-lite')
         else:
             print(" Thiếu API Key Gemini!")
-            
+        
+        # 4. Short Text Model
+        self.short_text_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2', trust_remote_code=True)
+                    
         print(" Models đã sẵn sàng!")
 
 # Singleton instance

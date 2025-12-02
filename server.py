@@ -12,12 +12,16 @@ from services.processing import process_image_to_vector, encode_text, normalize
 from services.gemini_chat import route_question, generate_answer
 from config import SIMILARITY_THRESHOLD_PRODUCT, SIMILARITY_THRESHOLD_POLICY
 
+from router.sync import router as sync_router
+
 app = FastAPI(title="AI Service for TechBoxStore")
+
 
 @app.on_event("startup")
 async def startup_event():
     ai_manager.load_models()
     db_manager.connect()
+
 
 # --- HELPER SEARCH ---
 def search_products(query, k=10, return_full_text=True):
@@ -34,6 +38,7 @@ def search_products(query, k=10, return_full_text=True):
     return out
 
 # --- API ENDPOINTS ---
+app.include_router(sync_router)
 
 @app.post("/search/text")
 async def search_text(req: SearchRequest):
@@ -123,6 +128,7 @@ async def chat_bot(req: ChatRequest):
             3. Luôn đưa ra mức giá để khách cân nhắc.
             4. Giọng văn: Nhiệt tình, chuyên nghiệp, dùng emoji vừa phải.
             5. Tuyệt đối không bịa đặt tính năng không có trong dữ liệu.
+            6. Sản phẩm được hiển thị kèm giá trong giao diện, nên không nhắc giá trong tư vấn.
             """
         else:
             ctx = "Không tìm thấy sản phẩm nào khớp với yêu cầu."
@@ -168,10 +174,10 @@ async def chat_bot(req: ChatRequest):
 
     print("="*20)
     print("Generating answer...")
-    print(f"System Instruction: {instr}")
-    print(f"Context: {ctx}")
-    print(f"History: {hist_str}")
-    print(*"="*20)
+    # print(f"System Instruction: {instr}")
+    # print(f"Context: {ctx}")
+    # print(f"History: {hist_str}")
+    # print(*"="*20)
     
 
     ans = generate_answer(instr, ctx, hist_str, req.question)
