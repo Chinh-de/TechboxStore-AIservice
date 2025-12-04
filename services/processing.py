@@ -2,6 +2,7 @@ import numpy as np
 import io
 import re
 import requests
+from requests.exceptions import RequestException
 from PIL import Image
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing import image
@@ -43,6 +44,21 @@ def encode_image_from_url(img_url):
     else:
         raise ValueError(f"Failed to fetch image from URL: {img_url}")
     
+def encode_image_from_url(img_url: str):
+    try:
+        response = requests.get(img_url, timeout=5)
+        response.raise_for_status()
+    except RequestException as e:
+        print(f"Cannot fetch image: {img_url} | {e}")
+        return None 
+
+    try:
+        img_bytes = response.content
+        return process_image_to_vector(img_bytes)
+    except Exception as e:
+        print(f"Failed to process image: {img_url} | {e}")
+        return None
+
 def clean_md(description: str) -> str:
     if not description:
         return ""

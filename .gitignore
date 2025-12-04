@@ -1,2 +1,4 @@
 .env
-/lancerdb_data/*
+lancedb_data/*
+testGemini.py
+models/*

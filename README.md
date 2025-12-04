@@ -17,10 +17,11 @@
    - Khóa API này cần thiết cho chức năng chatbot.
 
 ## Chạy ứng dụng
+Đầu tiên chạy các file seed trong seeder.
 
 Chạy server với lệnh:
 ```
-<!-- uvicorn main:app --reload -->
+<!-- uvicorn server:app --reload --reload-include "*.py" --reload-exclude "models\*" --host 0.0.0.0 --port 8000 -->
 python server.py
 ```
 

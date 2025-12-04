@@ -16,6 +16,8 @@ def sync_product_data(product_data_dict):
     image_vectors = []
     for img_url in product_embedding_data['images']:
         vec = encode_image_from_url(img_url)
+        if vec is None:
+            continue  #bỏ qua nếu lấy vector embed ảnh thất bại
         image_vectors.append(ImageSchema(
             spu=product_data_dict['spu'],
             vector=vec
