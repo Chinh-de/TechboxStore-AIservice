@@ -2,14 +2,14 @@ import os
 from sentence_transformers import SentenceTransformer
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.models import load_model
-import google.generativeai as genai
-from config import GOOGLE_API_KEY, GEMINI_MODEL_NAME
+from google import genai
+from config import GEMINI_API_KEY, GEMINI_MODEL_NAME
 
 class AIModelManager:
     def __init__(self):
         self.text_model = None
         self.image_model = None
-        self.gemini_model = None
+        self.gemini_client = None
         self.short_text_model = None
         
         self.MODELS_DIR = "./models"
@@ -67,15 +67,12 @@ class AIModelManager:
             print(f" Lỗi Short Text Model: {e}")
 
         # 4. Gemini (Online)
-        if GOOGLE_API_KEY:
-            try:
-                genai.configure(api_key=GOOGLE_API_KEY)
-                self.gemini_model = genai.GenerativeModel(GEMINI_MODEL_NAME or 'gemini-1.5-flash')
-                print(" [Online] Gemini đã kết nối.")
-            except Exception as e:
-                print(f" Lỗi Gemini: {e}")
-        else:
-            print(" Thiếu API Key Gemini!")
+        try:
+            self.gemini_client = genai.Client()
+            print(" [Online] Gemini đã kết nối.")
+        except Exception as e:
+            print(f" Lỗi Gemini: {e}")
+            self.gemini_client = None
 
         print(" Đã tải xong toàn bộ Models!")
 

@@ -2,3 +2,4 @@
 lancedb_data/*
 testGemini.py
 models/*
+.testGemini

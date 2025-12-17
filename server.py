@@ -97,7 +97,7 @@ async def search_image(file: UploadFile = File(...), top_k: int = 10):
 
 @app.post("/chat")
 async def chat_bot(req: ChatRequest):
-    if not ai_manager.gemini_model: raise HTTPException(503, "No Gemini Key")
+    if not ai_manager.gemini_client: raise HTTPException(503, "No Gemini Key")
     
     hist_str = "\n".join([f"{m.role}: {m.content}" for m in req.history[-6:]])
     

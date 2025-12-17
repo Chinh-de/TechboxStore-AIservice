@@ -1,5 +1,6 @@
 import json
 from services.ai_models import ai_manager
+from config import GEMINI_MODEL_NAME
 
 def route_question(user_query, history_text):
     prompt = f"""
@@ -28,7 +29,7 @@ def route_question(user_query, history_text):
     Chỉ trả về JSON thuần, không markdown.
     """
     try:
-        response = ai_manager.gemini_model.generate_content(prompt)
+        response = ai_manager.gemini_client.models.generate_content(model=GEMINI_MODEL_NAME or 'gemini-2.5-flash', contents=prompt)
         text = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(text)
     except:
@@ -48,5 +49,5 @@ def generate_answer(system_instruction, context_str, hist_str, question):
     KHÁCH HỎI: "{question}"
     TRẢ LỜI:
     """
-    response = ai_manager.gemini_model.generate_content(prompt)
+    response = ai_manager.gemini_client.models.generate_content(model=GEMINI_MODEL_NAME or 'gemini-2.5-flash', contents=prompt)
     return response.text.strip()
